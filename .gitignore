@@ -1,0 +1,120 @@
+# ======================
+# Python
+# ======================
+
+**/__pycache__/
+**/*.py[cod]
+**/*.pyo
+**/*.pyd
+.Python
+
+# ======================
+# Virtual Environment
+# ======================
+
+**/venv/
+**/.env
+**/.env.*
+
+# ======================
+# Jupyter
+# ======================
+
+**/.ipynb_checkpoints/
+
+# ======================
+# VS Code
+# ======================
+
+**/.vscode/
+
+# ======================
+# macOS
+# ======================
+
+.DS_Store
+
+# ======================
+# Logs
+# ======================
+
+**/logs/
+**/*.log
+
+# ======================
+# Training Outputs
+# ======================
+
+**/training_outputs/
+**/checkpoints/
+**/runs/
+**/output/
+**/outputs/
+
+# ======================
+# HuggingFace Models
+# ======================
+
+**/models/distilbert_highlighter/
+**/models/bart_summarizer/
+**/models/checkpoints/
+
+# ======================
+# ONNX Exports
+# ======================
+
+**/onnx/
+**/*.onnx
+
+# ======================
+# Dataset Files
+# ======================
+
+**/data/*.csv
+**/data/*.json
+**/data/*.jsonl
+**/data/raw/
+**/data/processed/
+
+# ======================
+# Cache
+# ======================
+
+**/.cache/
+**/huggingface_cache/
+
+# ======================
+# PyTorch
+# ======================
+
+**/*.pt
+**/*.pth
+**/*.bin
+**/*.safetensors
+
+# ======================
+# Testing
+# ======================
+
+**/.pytest_cache/
+
+# ======================
+# Coverage
+# ======================
+
+**/htmlcov/
+**/.coverage
+
+# ======================
+# Build
+# ======================
+
+**/dist/
+**/build/
+
+# ======================
+# Chrome Extension
+# ======================
+
+extension/dist/
+extension/build/

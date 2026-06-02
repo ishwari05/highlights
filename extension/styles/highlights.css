@@ -1,0 +1,37 @@
+/* Injected into the host page — must not affect layout outside highlights */
+
+::highlight(highlights-important) {
+  background-color: rgba(255, 214, 0, 0.45);
+  color: inherit;
+}
+
+.highlights-paragraph {
+  background-color: rgba(255, 214, 0, 0.18) !important;
+  box-shadow: inset 4px 0 0 #f5c400;
+  border-radius: 2px;
+  transition: background-color 0.2s ease;
+}
+
+.highlights-paragraph.highlights-paragraph-active {
+  background-color: rgba(255, 214, 0, 0.32) !important;
+  box-shadow: inset 4px 0 0 #e6b800;
+}
+
+mark.highlights-mark {
+  background-color: rgba(255, 214, 0, 0.55);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.highlights-margin-guide {
+  position: absolute;
+  width: 4px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #f5c400, #ff9800);
+  pointer-events: none;
+  z-index: 2147483646;
+  opacity: 0.85;
+}

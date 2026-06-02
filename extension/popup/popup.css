@@ -1,0 +1,39 @@
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #fafafa;
+  color: #111;
+}
+
+#popup {
+  width: 320px;
+  padding: 16px;
+}
+
+h1 {
+  font-size: 1.1rem;
+  margin: 0 0 12px;
+}
+
+button {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 10px;
+  background: #1f6feb;
+  color: white;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+#status {
+  margin-top: 12px;
+  font-size: 0.95rem;
+  color: #333;
+  line-height: 1.4;
+}
