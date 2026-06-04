@@ -16,7 +16,11 @@
 
     for (const selector of selectors) {
       const element = document.querySelector(selector);
-      if (element && element.innerText.trim().split(/\s+/).filter(Boolean).length >= 120) {
+
+      if (
+        element &&
+        element.innerText.trim().split(/\s+/).filter(Boolean).length >= 120
+      ) {
         return element;
       }
     }
@@ -35,8 +39,28 @@
     }
 
     return highlights
-      .map((item) => (typeof item === "string" ? item.trim() : ""))
-      .filter(Boolean);
+      .map((item) => {
+        if (typeof item === "string") {
+          return {
+            id: null,
+            text: item.trim(),
+            score: null,
+          };
+        }
+
+        if (item && typeof item === "object") {
+          const parsedId = Number(item.id);
+
+          return {
+            id: Number.isInteger(parsedId) && parsedId >= 0 ? parsedId : null,
+            text: typeof item.text === "string" ? item.text.trim() : "",
+            score: typeof item.score === "number" ? item.score : null,
+          };
+        }
+
+        return null;
+      })
+      .filter((item) => item && item.text);
   }
 
   function normalizeHighlightIds(ids) {
@@ -49,7 +73,14 @@
       .filter((id) => Number.isInteger(id) && id >= 0);
   }
 
-  function buildPageMeta(pageTitle, wordCount, readingTime, highlightCount, isPdf, metrics) {
+  function buildPageMeta(
+    pageTitle,
+    wordCount,
+    readingTime,
+    highlightCount,
+    isPdf,
+    metrics,
+  ) {
     return {
       title: pageTitle,
       wordCount,
@@ -65,6 +96,7 @@
 
   function navigateToSentence(sentence, state) {
     const helper = window.HighlightsHelper;
+
     if (!helper || !state) {
       return;
     }
@@ -74,29 +106,66 @@
       return;
     }
 
+    const highlightObject = state.highlightObjects?.find(
+      (item) => item.text === sentence,
+    );
+
+    if (highlightObject && Number.isInteger(highlightObject.id)) {
+      const indexedById = state.sentenceIndex?.sentences?.find(
+        (entry) => Number(entry.id) === Number(highlightObject.id),
+      );
+
+      if (indexedById) {
+        helper.scrollToPosition(indexedById.start, state.segments);
+        return;
+      }
+    }
+
     const indexedEntry = state.sentenceIndex?.sentences?.find(
       (entry) => entry.cleaned === sentence || entry.text === sentence,
     );
+
     if (indexedEntry) {
       helper.scrollToPosition(indexedEntry.start, state.segments);
       return;
     }
 
     const match = helper.findSentencePosition(sentence, state.collapsedText);
+
     if (match) {
       helper.scrollToPosition(match.start, state.segments);
       return;
     }
 
     const block = helper.findParagraphForSentence(sentence, state.contentRoot);
+
     if (block) {
       block.classList.add("highlights-paragraph-active");
-      block.scrollIntoView({ behavior: "smooth", block: "center" });
-      window.setTimeout(() => block.classList.remove("highlights-paragraph-active"), 2400);
+      block.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      window.setTimeout(() => {
+        block.classList.remove("highlights-paragraph-active");
+      }, 2400);
+
       return;
     }
 
     helper.tryFindOnPage(sentence.slice(0, 120));
+  }
+
+  function extractHighlightIds(highlightObjects, fallbackIds) {
+    const idsFromObjects = highlightObjects
+      .map((item) => item.id)
+      .filter((id) => Number.isInteger(id) && id >= 0);
+
+    if (idsFromObjects.length > 0) {
+      return idsFromObjects;
+    }
+
+    return normalizeHighlightIds(fallbackIds);
   }
 
   async function runAnalysis() {
@@ -104,27 +173,46 @@
     const panelUI = window.HighlightsPanelUI;
     const api = window.HighlightsAPI;
     const sentenceIndexLib = window.HighlightsSentenceIndex;
+
     let loadingMeta = null;
 
     try {
       if (!helper) {
-        return { ok: false, reason: "helper-missing" };
+        return {
+          ok: false,
+          reason: "helper-missing",
+        };
       }
 
       if (!panelUI) {
-        return { ok: false, reason: "panel-ui-missing" };
+        return {
+          ok: false,
+          reason: "panel-ui-missing",
+        };
       }
 
       if (!api || typeof api.analyzeWithBackend !== "function") {
-        return { ok: false, reason: "api-missing" };
+        return {
+          ok: false,
+          reason: "api-missing",
+        };
       }
 
-      if (!sentenceIndexLib || typeof sentenceIndexLib.buildSentenceIndex !== "function") {
-        return { ok: false, reason: "sentence-index-missing" };
+      if (
+        !sentenceIndexLib ||
+        typeof sentenceIndexLib.buildSentenceIndex !== "function"
+      ) {
+        return {
+          ok: false,
+          reason: "sentence-index-missing",
+        };
       }
 
       if (!document.body) {
-        return { ok: false, reason: "no-document-body" };
+        return {
+          ok: false,
+          reason: "no-document-body",
+        };
       }
 
       helper.clearPreviousHighlights();
@@ -136,10 +224,25 @@
       const pageIndex = helper.buildPageIndex(contentRoot);
       const articleText = pageIndex.collapsedText || "";
 
-      const wordCount = articleText.trim().split(/\s+/).filter(Boolean).length;
-      const readingTime = Math.max(1, Math.ceil(wordCount / 225));
+      const wordCount = articleText
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean).length;
 
-      loadingMeta = buildPageMeta(pageTitle, wordCount, readingTime, 0, isPdf, null);
+      const readingTime = Math.max(
+        1,
+        Math.ceil(wordCount / 225),
+      );
+
+      loadingMeta = buildPageMeta(
+        pageTitle,
+        wordCount,
+        readingTime,
+        0,
+        isPdf,
+        null,
+      );
+
       await panelUI.mountLoading(loadingMeta);
 
       if (!articleText.trim() || articleText.length < 100) {
@@ -147,23 +250,47 @@
       }
 
       const sentenceIndex = sentenceIndexLib.buildSentenceIndex(articleText);
-      console.log("[Highlights] Sentence index:", sentenceIndex.sentences.length, "sentences");
+
+      console.log(
+        "[Highlights] Sentence index:",
+        sentenceIndex.sentences.length,
+        "sentences",
+      );
 
       const indexedPayload = sentenceIndex.sentences.map((entry) => ({
-        id: entry.id,
+        id: Number(entry.id),
         text: entry.text,
       }));
 
-      const backendResult = await api.analyzeWithBackend(articleText, indexedPayload);
+      const backendResult = await api.analyzeWithBackend(
+        articleText,
+        indexedPayload,
+      );
 
       const summary =
         typeof backendResult.summary === "string"
           ? backendResult.summary.trim()
           : "No summary returned.";
-      const highlights = normalizeHighlights(backendResult.highlights);
-      const highlightIds = normalizeHighlightIds(backendResult.highlight_ids);
+
+      const highlightObjects = normalizeHighlights(
+        backendResult.highlights,
+      );
+
+      const highlights = highlightObjects.map(
+        (item) => item.text,
+      );
+
+      const highlightIds = extractHighlightIds(
+        highlightObjects,
+        backendResult.highlight_ids,
+      );
+
       const metrics = backendResult.metrics || {};
-      const highlightCount = Math.max(highlights.length, highlightIds.length);
+
+      const highlightCount = Math.max(
+        highlights.length,
+        highlightIds.length,
+      );
 
       const state = {
         isPdf,
@@ -171,7 +298,9 @@
         collapsedText: pageIndex.collapsedText,
         segments: pageIndex.segments,
         sentenceIndex,
+        highlightObjects,
       };
+
       window[ANALYSIS_STATE_KEY] = state;
 
       let highlightResult = {
@@ -196,10 +325,30 @@
                 pageIndex.segments,
               );
 
-        console.log("[Highlights] Highlight ranges:", ranges);
-        highlightResult = helper.applyHighlights(ranges, contentRoot);
-        console.log("[Highlights] Apply result:", highlightResult);
-        console.log("[Highlights] Diagnostics:", helper.getHighlightDiagnostics());
+        console.log(
+          "[Highlights] Highlight IDs:",
+          highlightIds,
+        );
+
+        console.log(
+          "[Highlights] Highlight ranges:",
+          ranges,
+        );
+
+        highlightResult = helper.applyHighlights(
+          ranges,
+          contentRoot,
+        );
+
+        console.log(
+          "[Highlights] Apply result:",
+          highlightResult,
+        );
+
+        console.log(
+          "[Highlights] Diagnostics:",
+          helper.getHighlightDiagnostics(),
+        );
       }
 
       const pageData = buildPageMeta(
@@ -210,9 +359,14 @@
         isPdf,
         metrics,
       );
-      pageData.summary = summary || "No summary returned by the backend.";
+
+      pageData.summary =
+        summary || "No summary returned by the backend.";
+
       pageData.highlights = highlights;
       pageData.topSentences = highlights;
+      pageData.highlightObjects = highlightObjects;
+      pageData.highlightIds = highlightIds;
 
       await panelUI.mount(pageData, {
         onNavigate: (sentence) => navigateToSentence(sentence, state),
@@ -220,9 +374,15 @@
 
       const host = document.getElementById("highlights-root");
       const panel = host?.shadowRoot?.querySelector(".hl-panel");
+
       if (panel) {
         const rect = panel.getBoundingClientRect();
-        console.log("[Highlights] Sidebar visible:", rect.width > 0 && rect.height > 0, rect);
+
+        console.log(
+          "[Highlights] Sidebar visible:",
+          rect.width > 0 && rect.height > 0,
+          rect,
+        );
       }
 
       return {
@@ -231,12 +391,17 @@
         isPdf,
         summary,
         metrics,
+        highlightIds,
       };
     } catch (error) {
       console.error("[Highlights] Analysis failed:", error);
 
       const panelUIOnError = window.HighlightsPanelUI;
-      if (panelUIOnError && typeof panelUIOnError.mountError === "function") {
+
+      if (
+        panelUIOnError &&
+        typeof panelUIOnError.mountError === "function"
+      ) {
         await panelUIOnError.mountError(
           "Could not connect to AI service. Start the backend: uvicorn app:app --reload",
           loadingMeta || {
