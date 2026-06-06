@@ -18,6 +18,37 @@
       .filter((sentence) => sentence.length >= MIN_SENTENCE_LENGTH);
   }
 
+  function shouldKeepSentence(sentence) {
+    const text = sentence.trim();
+    if (text.length < 30) return false;
+
+    const lower = text.toLowerCase();
+
+    const bannedExact = [
+      "references",
+      "external links",
+      "further reading",
+      "bibliography",
+      "see also",
+      "notes",
+      "sources"
+    ];
+
+    if (bannedExact.includes(lower)) return false;
+
+    if (/^\[\s*\d+\s*\]/.test(text)) return false;
+
+    const citationCount = (text.match(/\[\s*\d+\s*\]/g) || []).length;
+    if (citationCount >= 3) return false;
+
+    if (/^isbn\b/i.test(text)) return false;
+    if (/^doi\b/i.test(text)) return false;
+    if (/retrieved\s+\d{1,2}\s+[a-z]+\s+\d{4}/i.test(text)) return false;
+    if (/archived from the original/i.test(text)) return false;
+
+    return true;
+  }
+
   /**
    * Map sentences to collapsedText character offsets (same coordinate system as segments).
    */
@@ -29,6 +60,10 @@
     for (const rawText of splitIntoSentences(collapsedText)) {
       const cleaned = cleanSentenceText(rawText);
       if (cleaned.length < MIN_SENTENCE_LENGTH) {
+        continue;
+      }
+
+      if (!shouldKeepSentence(rawText)) {
         continue;
       }
 

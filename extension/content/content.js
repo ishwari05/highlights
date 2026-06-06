@@ -222,7 +222,25 @@
       const pageTitle = document.title.trim();
       const contentRoot = isPdf ? document.body : findContentRoot();
       const pageIndex = helper.buildPageIndex(contentRoot);
-      const articleText = pageIndex.collapsedText || "";
+
+      const isWikipedia = /^[a-z]{2,3}\.wikipedia\.org$/i.test(
+        window.location.hostname,
+      );
+
+      let articleText;
+
+      if (isWikipedia) {
+        articleText = Array.from(
+          document.querySelectorAll(
+            "#mw-content-text .mw-parser-output > p",
+          ),
+        )
+          .map((p) => p.innerText.trim())
+          .filter((p) => p.length > 80)
+          .join("\n\n");
+      } else {
+        articleText = pageIndex.collapsedText || "";
+      }
 
       const wordCount = articleText
         .trim()
