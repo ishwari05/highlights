@@ -2,17 +2,14 @@ from pathlib import Path
 from typing import TypedDict
 
 import torch
-from transformers import (
-    AutoModelForSequenceClassification,
-    AutoTokenizer,
-)
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from models.sentence_split import split_sentences
 from models.text_clean import clean_sentence
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-MODEL_PATH = BASE_DIR / "models" / "distilbert_highlighter_regression"
+MODEL_PATH = BASE_DIR / "models" / "distilbert_highlighter_final"
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
@@ -24,16 +21,7 @@ class SentenceInput(TypedDict):
     text: str
 
 
-def _predict_scores(
-    texts: list[str],
-) -> list[float]:
-    """
-    Regression inference.
-
-    The model outputs one raw importance value per sentence.
-    We clamp it into the 0–1 range.
-    """
-
+def _predict_scores(texts: list[str]) -> list[float]:
     if not texts:
         return []
 
@@ -47,70 +35,28 @@ def _predict_scores(
 
     with torch.no_grad():
         outputs = model(**inputs)
-
         scores = outputs.logits.squeeze(-1)
+        scores = torch.clamp(scores, min=0.0, max=1.0)
 
-        scores = torch.clamp(
-            scores,
-            min=0.0,
-            max=1.0,
-        )
-
-    return [
-        float(score)
-        for score in scores.tolist()
-    ]
+    return [float(score) for score in scores.tolist()]
 
 
-def score_sentence_items(
-    items: list[SentenceInput],
-) -> list[tuple[int, str, float]]:
-    """
-    Score indexed sentences.
+def _select_highlights(
+    ranked: list,
+    score_index: int,
+    threshold: float,
+    min_highlights: int,
+    max_highlights: int,
+) -> list:
+    selected = [row for row in ranked if row[score_index] >= threshold]
 
-    Returns:
-        [
-            (sentence_id, cleaned_text, importance_score)
-        ]
-    """
+    if len(selected) < min_highlights:
+        selected = ranked[:min_highlights]
 
-    if not items:
-        return []
+    if len(selected) > max_highlights:
+        selected = selected[:max_highlights]
 
-    ids: list[int] = []
-    cleaned_texts: list[str] = []
-
-    for item in items:
-        cleaned = clean_sentence(
-            item["text"]
-        )
-
-        if len(cleaned) < 20:
-            continue
-
-        ids.append(
-            int(item["id"])
-        )
-
-        cleaned_texts.append(
-            cleaned
-        )
-
-    if not cleaned_texts:
-        return []
-
-    scores = _predict_scores(
-        cleaned_texts
-    )
-
-    return [
-        (
-            ids[index],
-            cleaned_texts[index],
-            scores[index],
-        )
-        for index in range(len(ids))
-    ]
+    return selected
 
 
 def _empty_result() -> dict:
@@ -123,49 +69,58 @@ def _empty_result() -> dict:
     }
 
 
+def score_sentence_items(
+    items: list[SentenceInput],
+) -> list[tuple[int, str, float]]:
+    if not items:
+        return []
+
+    ids: list[int] = []
+    cleaned_texts: list[str] = []
+
+    for item in items:
+        cleaned = clean_sentence(item["text"])
+
+        if len(cleaned) < 20:
+            continue
+
+        ids.append(int(item["id"]))
+        cleaned_texts.append(cleaned)
+
+    if not cleaned_texts:
+        return []
+
+    scores = _predict_scores(cleaned_texts)
+
+    return [
+        (ids[index], cleaned_texts[index], scores[index])
+        for index in range(len(ids))
+    ]
+
+
 def get_highlights_from_index(
     sentences: list[SentenceInput],
     threshold: float = 0.45,
     min_highlights: int = 5,
     max_highlights: int = 20,
 ) -> dict:
-    """
-    Production path.
-
-    Receives pre-indexed sentences from the Chrome extension.
-    Scores them with the regression model.
-    Returns stable sentence IDs so frontend can highlight by ID.
-    """
-
-    ranked = score_sentence_items(
-        sentences
-    )
+    ranked = score_sentence_items(sentences)
 
     if not ranked:
         return _empty_result()
 
-    ranked.sort(
-        key=lambda row: row[2],
-        reverse=True,
+    ranked.sort(key=lambda row: row[2], reverse=True)
+
+    selected = _select_highlights(
+        ranked=ranked,
+        score_index=2,
+        threshold=threshold,
+        min_highlights=min_highlights,
+        max_highlights=max_highlights,
     )
 
-    top = [row for row in ranked if row[2] >= threshold]
-
-    if len(top) < min_highlights:
-        top = ranked[:min_highlights]
-
-    if len(top) > max_highlights:
-        top = top[:max_highlights]
-
-    total_score_sum = sum(
-        row[2]
-        for row in ranked
-    )
-
-    selected_score_sum = sum(
-        row[2]
-        for row in top
-    )
+    total_score_sum = sum(row[2] for row in ranked)
+    selected_score_sum = sum(row[2] for row in selected)
 
     return {
         "highlights": [
@@ -174,22 +129,12 @@ def get_highlights_from_index(
                 "text": row[1],
                 "score": float(row[2]),
             }
-            for row in top
+            for row in selected
         ],
-        "highlight_ids": [
-            row[0]
-            for row in top
-        ],
-        "scores": [
-            float(row[2])
-            for row in top
-        ],
-        "selected_score_sum": float(
-            selected_score_sum
-        ),
-        "total_score_sum": float(
-            total_score_sum
-        ),
+        "highlight_ids": [row[0] for row in selected],
+        "scores": [float(row[2]) for row in selected],
+        "selected_score_sum": float(selected_score_sum),
+        "total_score_sum": float(total_score_sum),
     }
 
 
@@ -199,18 +144,7 @@ def get_highlights(
     min_highlights: int = 5,
     max_highlights: int = 20,
 ) -> dict:
-    """
-    Fallback path.
-
-    Splits raw article text, scores sentences,
-    and returns top highlights.
-
-    This is used when frontend does not send sentence IDs.
-    """
-
-    sentences = split_sentences(
-        text
-    )
+    sentences = split_sentences(text)
 
     if not sentences:
         return _empty_result()
@@ -229,36 +163,24 @@ def get_highlights(
     if not cleaned_sentences:
         return _empty_result()
 
-    scores = _predict_scores(
-        cleaned_sentences
-    )
+    scores = _predict_scores(cleaned_sentences)
 
     ranked = sorted(
-        zip(
-            cleaned_sentences,
-            scores,
-        ),
+        zip(cleaned_sentences, scores),
         key=lambda row: row[1],
         reverse=True,
     )
 
-    top = [row for row in ranked if row[1] >= threshold]
-
-    if len(top) < min_highlights:
-        top = ranked[:min_highlights]
-
-    if len(top) > max_highlights:
-        top = top[:max_highlights]
-
-    total_score_sum = sum(
-        score
-        for _, score in ranked
+    selected = _select_highlights(
+        ranked=ranked,
+        score_index=1,
+        threshold=threshold,
+        min_highlights=min_highlights,
+        max_highlights=max_highlights,
     )
 
-    selected_score_sum = sum(
-        score
-        for _, score in top
-    )
+    total_score_sum = sum(score for _, score in ranked)
+    selected_score_sum = sum(score for _, score in selected)
 
     return {
         "highlights": [
@@ -267,17 +189,10 @@ def get_highlights(
                 "text": sentence,
                 "score": float(score),
             }
-            for sentence, score in top
+            for sentence, score in selected
         ],
         "highlight_ids": [],
-        "scores": [
-            float(score)
-            for _, score in top
-        ],
-        "selected_score_sum": float(
-            selected_score_sum
-        ),
-        "total_score_sum": float(
-            total_score_sum
-        ),
+        "scores": [float(score) for _, score in selected],
+        "selected_score_sum": float(selected_score_sum),
+        "total_score_sum": float(total_score_sum),
     }
