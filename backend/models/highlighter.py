@@ -100,9 +100,9 @@ def score_sentence_items(
 
 def get_highlights_from_index(
     sentences: list[SentenceInput],
-    threshold: float = 0.45,
-    min_highlights: int = 5,
-    max_highlights: int = 20,
+    threshold: float = 0.30,
+    min_highlights: int = 8,
+    max_highlights: int = 25,
 ) -> dict:
     ranked = score_sentence_items(sentences)
 
