@@ -15,7 +15,57 @@ h1 {
   margin: 0 0 12px;
 }
 
-button {
+/* ── Mode tabs ──────────────────────────────────────── */
+
+.mode-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #d0d7de;
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 9px 6px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 0;
+  background: #f6f8fa;
+  color: #555;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.mode-tab:first-child {
+  border-right: 1px solid #d0d7de;
+}
+
+.mode-tab:hover {
+  background: #eef2f6;
+}
+
+.mode-tab.active {
+  background: #1f6feb;
+  color: #fff;
+}
+
+/* ── Panels ─────────────────────────────────────────── */
+
+.mode-panel {
+  display: block;
+}
+
+.mode-panel.hidden {
+  display: none;
+}
+
+/* ── Shared button style ────────────────────────────── */
+
+button#analyze,
+button#analyze-pdf {
   width: 100%;
   padding: 12px 14px;
   font-size: 1rem;
@@ -26,10 +76,63 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
+button#analyze:disabled,
+button#analyze-pdf:disabled {
   opacity: 0.65;
   cursor: not-allowed;
 }
+
+/* ── File picker ────────────────────────────────────── */
+
+.file-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 12px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  border: 2px dashed #c4cdd5;
+  background: #f6f8fa;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.file-picker:hover {
+  border-color: #1f6feb;
+  background: #edf4ff;
+}
+
+.file-picker input[type="file"] {
+  /* Visually hidden but accessible to screen readers */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.file-name {
+  font-size: 0.9rem;
+  color: #555;
+  text-align: center;
+  word-break: break-all;
+}
+
+.file-picker.has-file {
+  border-color: #2da44e;
+  background: #ecfdf0;
+}
+
+.file-picker.has-file .file-name {
+  color: #1a7f37;
+  font-weight: 500;
+}
+
+/* ── Status ─────────────────────────────────────────── */
 
 #status {
   margin-top: 12px;

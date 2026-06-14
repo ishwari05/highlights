@@ -9,7 +9,44 @@
 <body>
   <div id="popup">
     <h1>Highlights</h1>
-    <button id="analyze">Analyze Page</button>
+
+    <!-- ── Mode switcher ─────────────────────────────── -->
+    <div class="mode-tabs" role="tablist" aria-label="Analysis mode">
+      <button
+        id="tab-webpage"
+        class="mode-tab active"
+        role="tab"
+        aria-selected="true"
+        aria-controls="panel-webpage"
+      >
+        Analyze Webpage
+      </button>
+      <button
+        id="tab-pdf"
+        class="mode-tab"
+        role="tab"
+        aria-selected="false"
+        aria-controls="panel-pdf"
+      >
+        Upload PDF
+      </button>
+    </div>
+
+    <!-- ── Webpage analysis panel ────────────────────── -->
+    <div id="panel-webpage" class="mode-panel" role="tabpanel" aria-labelledby="tab-webpage">
+      <button id="analyze">Analyze Page</button>
+    </div>
+
+    <!-- ── PDF upload panel ──────────────────────────── -->
+    <div id="panel-pdf" class="mode-panel hidden" role="tabpanel" aria-labelledby="tab-pdf">
+      <label class="file-picker" id="pdf-picker-label">
+        <input type="file" id="pdf-file" accept=".pdf" />
+        <span id="pdf-file-name" class="file-name">Choose a PDF file…</span>
+      </label>
+      <button id="analyze-pdf" disabled>Analyze PDF</button>
+    </div>
+
+    <!-- ── Shared status area ────────────────────────── -->
     <p id="status">Click Analyze to extract the most important sentences from the current page.</p>
   </div>
   <script src="popup.js"></script>

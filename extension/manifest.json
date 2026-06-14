@@ -15,7 +15,11 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["styles/panel.css", "styles/highlights.css"],
+      "resources": [
+        "styles/panel.css",
+        "styles/highlights.css",
+        "pdf_viewer/*"
+      ],
       "matches": ["<all_urls>"]
     }
   ]

@@ -46,6 +46,7 @@
 # ======================
 
 **/training_outputs/
+**/training_outputs_final/
 **/checkpoints/
 **/runs/
 **/output/
@@ -56,6 +57,7 @@
 # ======================
 
 **/models/distilbert_highlighter/
+**/models/distilbert_highlighter_final/
 **/models/bart_summarizer/
 **/models/checkpoints/
 

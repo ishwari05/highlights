@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Highlights PDF Viewer</title>
+  <link rel="stylesheet" href="viewer.css" />
+  <link rel="stylesheet" href="../styles/highlights.css" />
+  <!-- Google Fonts for premium typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Premium Glassmorphic Sticky Toolbar -->
+  <header class="toolbar">
+    <div class="toolbar-left">
+      <div class="app-logo">
+        <span class="logo-dot"></span>
+        <h1 class="app-title">Highlights PDF Viewer</h1>
+      </div>
+      <span class="divider"></span>
+      <span id="pdf-name" class="pdf-filename">Loading document...</span>
+    </div>
+    
+    <div class="toolbar-center">
+      <!-- Mock toolbar controls for zoom / pages -->
+      <div class="control-group">
+        <button class="btn-icon" title="Previous Page" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <span class="page-display"><span id="current-page">--</span> / <span id="total-pages">--</span></span>
+        <button class="btn-icon" title="Next Page" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+
+      <span class="divider"></span>
+
+      <div class="control-group">
+        <button class="btn-icon" title="Zoom Out" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>
+        </button>
+        <span class="zoom-display">100%</span>
+        <button class="btn-icon" title="Zoom In" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar-right">
+      <!-- Debug Mode Toggle Button -->
+      <button id="btn-debug" class="btn-action secondary" title="Toggle Text Layer Debug Mode" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m10 15 5-3-5-3v6Z"/></svg>
+        <span>Debug Mode</span>
+      </button>
+
+      <!-- Download Button -->
+      <button id="btn-download" class="btn-action" title="Download original PDF" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        <span>Download</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Centered split layout: PDF container (Left) and Sticky AI Panel (Right) -->
+  <main class="viewer-main">
+    <!-- Left Column: PDF Scroll Container -->
+    <div id="pdf-container">
+      <!-- Initial Loading / Info Card -->
+      <div id="status-card" class="info-card">
+        <div class="spinner-container">
+          <div class="loading-spinner"></div>
+        </div>
+        <h2 id="status-title">Loading PDF document...</h2>
+        <p id="status-desc">Resolving reference and initializing canvas layout.</p>
+        <div id="pdf-url-display" class="url-badge"></div>
+      </div>
+    </div>
+
+    <!-- Right Column: Sticky AI Sidebar -->
+    <aside id="analysis-panel" class="analysis-panel">
+      <!-- Loading State -->
+      <div id="panel-loading" class="panel-state">
+        <div class="panel-spinner-container">
+          <div class="loading-spinner small"></div>
+        </div>
+        <h3>Running AI analysis...</h3>
+        <p>Processing the document content to extract summaries and sentence highlights.</p>
+      </div>
+
+      <!-- Error State -->
+      <div id="panel-error" class="panel-state hidden">
+        <div class="error-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3Z"/></svg>
+        </div>
+        <h3>Analysis Failed</h3>
+        <p id="panel-error-desc">Could not connect to the backend highlight service.</p>
+        <button id="btn-retry-analysis" class="btn-action">Retry Analysis</button>
+      </div>
+
+      <!-- Content State -->
+      <div id="panel-content" class="panel-state hidden">
+        <!-- Document Info -->
+        <div class="panel-section doc-info-header">
+          <h2 id="panel-doc-title">Document Title</h2>
+          <p id="panel-doc-meta" class="meta-subtitle">-- pages • -- words</p>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="panel-section">
+          <h3>Reading Metrics</h3>
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <span class="metric-label">Original Read</span>
+              <span id="metric-original" class="metric-value">--</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Highlights Read</span>
+              <span id="metric-highlighted" class="metric-value">--</span>
+            </div>
+            <div class="metric-card highlight">
+              <span class="metric-label">Time Saved</span>
+              <span id="metric-saved" class="metric-value">--</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Coverage</span>
+              <span id="metric-coverage" class="metric-value">--</span>
+            </div>
+            <div class="metric-card">
+              <span class="metric-label">Confidence</span>
+              <span id="metric-confidence" class="metric-value">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="panel-section">
+          <h3>AI Summary</h3>
+          <div id="panel-summary-content" class="summary-container">
+            <!-- Bullet points or paragraphs -->
+          </div>
+        </div>
+
+        <!-- Highlights -->
+        <div class="panel-section">
+          <h3>Key Highlights</h3>
+          <div id="panel-highlights-list" class="highlights-list">
+            <!-- Highlight cards will render here -->
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="../content/highlighter.js"></script>
+  <script src="viewer.js"></script>
+</body>
+</html>

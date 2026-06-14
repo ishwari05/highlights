@@ -40,7 +40,7 @@
       return true;
     }
 
-    if (node.parentElement.closest("#highlights-root, #highlights-panel, .highlights-margin-guide")) {
+    if (node.parentElement.closest("#highlights-root, #highlights-panel, .highlights-margin-guide, #analysis-panel")) {
       return true;
     }
 
